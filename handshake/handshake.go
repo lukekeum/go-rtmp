@@ -47,11 +47,8 @@ func Connect(c net.Conn) error {
 	if err != nil {
 		fmt.Println("Error while write: ", err)
 	}
-	fmt.Println(s0, s1)
 
 	s2 := h.GenerateS2()
-
-	fmt.Println(s2)
 
 	_, err = c.Write(s2)
 	if err != nil {
