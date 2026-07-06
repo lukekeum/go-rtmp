@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"slices"
 	"time"
 )
 
 type Handshake struct {
 	c net.Conn
 	c1 []byte
-	timestamp uint32
+	s1 []byte
 }
 
 func NewHandshake(c net.Conn) (*Handshake) {
@@ -46,6 +47,12 @@ func Connect(c net.Conn) error {
 	_, err = c.Write(buf)
 	if err != nil {
 		fmt.Println("Error while write: ", err)
+		return err
+	}
+
+	if err := h.CheckC2(); err != nil {
+		fmt.Println("Invalid C2 checked: ", err)
+		return err
 	}
 
 	s2 := h.GenerateS2()
@@ -53,15 +60,47 @@ func Connect(c net.Conn) error {
 	_, err = c.Write(s2)
 	if err != nil {
 		fmt.Println("Error while write: ", err)
+		return err
 	}	
+
+	fmt.Println("Handhsake Completed")
 
 	return nil
 }
 
+func (h *Handshake) CheckC2() error {
+	c2, err := h.ReadC2()
+	if err != nil {
+		return err
+	}
+
+	s1RandomByte := make([]byte, 1528)
+	copy(s1RandomByte, h.s1[8:])
+
+	if slices.Equal(c2[8:], s1RandomByte) {
+		return nil
+	}
+
+	return ErrInvalidC2
+}
+
+func (h *Handshake) ReadC2() ([]byte, error) {
+	c2 := make([]byte, 1536)			
+	_, err := io.ReadFull(h.c, c2);
+	if err != nil {
+		return c2, err
+	}
+
+	return c2, nil
+}
+
 func (h *Handshake) GenerateS2() []byte {
-	var s2 []byte
+	s2 := make([]byte, len(h.c1))
 	copy(s2, h.c1)
-	binary.BigEndian.PutUint32(s2[4:], h.timestamp)	
+
+	timestamp := h.s1[0:4]
+
+	copy(s2[0:4], timestamp)
 
 	return s2
 }
@@ -76,12 +115,12 @@ func (h *Handshake) GenerateS0S1() ([]byte, []byte, error) {
 
 	timestamp := uint32(time.Now().UnixMilli())
 
-	h.timestamp = timestamp
-
 	binary.BigEndian.PutUint32(buf[0:], timestamp)
 	binary.BigEndian.PutUint32(buf[4:], 0)
 
 	copy(buf[8:], random)
+
+	h.s1 = buf
 
 	return []byte{3}, buf, nil
 }
