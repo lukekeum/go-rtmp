@@ -42,7 +42,7 @@ func Connect(c net.Conn) error {
 		return err
 	}
 
-	buf := append(s0, s1...)
+	buf := append(s0[:], s1...)
 
 	_, err = c.Write(buf)
 	if err != nil {
@@ -74,10 +74,7 @@ func (h *Handshake) CheckC2() error {
 		return err
 	}
 
-	s1RandomByte := make([]byte, 1528)
-	copy(s1RandomByte, h.s1[8:])
-
-	if slices.Equal(c2[8:], s1RandomByte) {
+	if slices.Equal(c2[0:4], h.s1[0:4]) && slices.Equal(c2[8:], h.s1[8:]) {
 		return nil
 	}
 
@@ -98,18 +95,17 @@ func (h *Handshake) GenerateS2() []byte {
 	s2 := make([]byte, len(h.c1))
 	copy(s2, h.c1)
 
-	timestamp := h.s1[0:4]
-
-	copy(s2[4:8], timestamp)
+	copy(s2[4:8], h.s1[0:4])
 
 	return s2
 }
 
-func (h *Handshake) GenerateS0S1() ([]byte, []byte, error) {
-	buf := make([]byte, 1536)
+func (h *Handshake) GenerateS0S1() ([1]byte, []byte, error) {
+	var version = [1]byte{3}
 
+	buf := make([]byte, 1536)
 	if _, err := rand.Read(buf[8:]); err != nil {
-		return nil, nil, err
+		return version, nil, err
 	}
 
 	timestamp := uint32(time.Now().UnixMilli())
@@ -119,21 +115,22 @@ func (h *Handshake) GenerateS0S1() ([]byte, []byte, error) {
 
 	h.s1 = buf
 
-	return []byte{3}, buf, nil
+	return version, buf, nil
 }
 
-func (h *Handshake) ReadC0C1() ([]byte, []byte, error) {
-	version := make([]byte, 1)
+func (h *Handshake) ReadC0C1() ([1]byte, []byte, error) {
+	var version [1]byte
+
 	c1 := make([]byte, 1536)
 
 	_, err := io.ReadFull(h.c, version[:])
 	if err != nil {
-		return nil, nil, err
+		return version, nil, err
 	}
 
 	_, err = io.ReadFull(h.c, c1[:])
 	if err != nil {
-		return nil, nil, err
+		return version, nil, err
 	}
 
 	h.c1 = c1
