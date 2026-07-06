@@ -88,7 +88,7 @@ func (h *Handshake) ReadC2() ([]byte, error) {
 	c2 := make([]byte, 1536)			
 	_, err := io.ReadFull(h.c, c2);
 	if err != nil {
-		return c2, err
+		return nil, err
 	}
 
 	return c2, nil
@@ -100,17 +100,16 @@ func (h *Handshake) GenerateS2() []byte {
 
 	timestamp := h.s1[0:4]
 
-	copy(s2[0:4], timestamp)
+	copy(s2[4:8], timestamp)
 
 	return s2
 }
 
 func (h *Handshake) GenerateS0S1() ([]byte, []byte, error) {
 	buf := make([]byte, 1536)
-	random := make([]byte, 1528)
 
-	if _, err := rand.Read(random); err != nil {
-		return []byte{3}, buf, err
+	if _, err := rand.Read(buf[8:]); err != nil {
+		return nil, nil, err
 	}
 
 	timestamp := uint32(time.Now().UnixMilli())
@@ -118,28 +117,26 @@ func (h *Handshake) GenerateS0S1() ([]byte, []byte, error) {
 	binary.BigEndian.PutUint32(buf[0:], timestamp)
 	binary.BigEndian.PutUint32(buf[4:], 0)
 
-	copy(buf[8:], random)
-
 	h.s1 = buf
 
 	return []byte{3}, buf, nil
 }
 
-func (h *Handshake) ReadC0C1() ([1]byte, [1536]byte, error) {
-	var version [1]byte
-	var c1 [1536]byte
+func (h *Handshake) ReadC0C1() ([]byte, []byte, error) {
+	version := make([]byte, 1)
+	c1 := make([]byte, 1536)
 
 	_, err := io.ReadFull(h.c, version[:])
 	if err != nil {
-		return version, c1, err
+		return nil, nil, err
 	}
 
 	_, err = io.ReadFull(h.c, c1[:])
 	if err != nil {
-		return version, c1, err
+		return nil, nil, err
 	}
 
-	h.c1 = c1[:]
+	h.c1 = c1
 
 	return version, c1, nil
 }
