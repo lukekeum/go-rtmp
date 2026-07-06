@@ -5,6 +5,7 @@ import (
 	"net"
 
 	"github.com/lukekeum/go-rtmp/handshake"
+	"github.com/lukekeum/go-rtmp/parser"
 )
 
 func main() {
@@ -33,4 +34,8 @@ func handleConn(c net.Conn) {
 	h := handshake.NewHandshake(c)
 
 	if err := h.Connect(); err != nil {}
+
+	p := parser.NewParser(c)
+
+	if err := p.Load(); err != nil {}
 }
