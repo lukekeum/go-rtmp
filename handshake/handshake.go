@@ -22,13 +22,11 @@ func NewHandshake(c net.Conn) (*Handshake) {
 	}
 }
 
-func Connect(c net.Conn) error {
-	h := NewHandshake(c)
-
+func (h *Handshake) Connect() error {
 	c0, _, err := h.ReadC0C1()
 	if err != nil {
 		fmt.Println("Error while ReadC0C1: ", err)
-		c.Close()
+		h.c.Close()
 		return err
 	}
 	if c0[0] != 3 {
@@ -44,7 +42,7 @@ func Connect(c net.Conn) error {
 
 	buf := append(s0[:], s1...)
 
-	_, err = c.Write(buf)
+	_, err = h.c.Write(buf)
 	if err != nil {
 		fmt.Println("Error while write: ", err)
 		return err
@@ -57,7 +55,7 @@ func Connect(c net.Conn) error {
 
 	s2 := h.GenerateS2()
 
-	_, err = c.Write(s2)
+	_, err = h.c.Write(s2)
 	if err != nil {
 		fmt.Println("Error while write: ", err)
 		return err

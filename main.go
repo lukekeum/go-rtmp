@@ -23,16 +23,14 @@ func main() {
 			fmt.Println("Error while accpet request: ", err)
 			continue
 		}
-		fmt.Printf("%+v\n", c)
 		go handleConn(c)
 	}
 }
 
 func handleConn(c net.Conn) {
-	// defer c.Close()
+	defer c.Close()
 
-	if err := handshake.Connect(c); err != nil {
-		
-	}
+	h := handshake.NewHandshake(c)
 
+	if err := h.Connect(); err != nil {}
 }
